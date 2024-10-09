@@ -1,13 +1,12 @@
 #ifndef BEGONIA_SHARED_CLIENT_CONFIGURATION_HPP
 #define BEGONIA_SHARED_CLIENT_CONFIGURATION_HPP
 
-#include "configuration.hpp"
+#include "configuration_factory.hpp"
 
-class ClientConfiguration : public Configuration {
+class ClientConfiguration : public ConfigurationFactory {
 	public:
-		void send() override;
-    void receive() override;
-
+		virtual ~ClientConfiguration() = default;
+		
 		void connect();
 };
 
