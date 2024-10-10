@@ -4,12 +4,10 @@
 #include <sys/select.h>
 #include <memory>
 #include <array>
-#include <map>
-#include <utility>
 #include <atomic>
-#include <stdexcept>
-#include <unistd.h>
 #include "configuration_factory.hpp"
+#include "client_configuration.hpp"
+#include "server_configuration.hpp"
 
 enum EventType {
   kReadEvent = 1,
@@ -24,23 +22,12 @@ class Application {
 		Application(const Application&) = delete;
 		Application& operator=(const Application&) = delete;
 
-		fd_set rfds, wfds, efds;
-		std::array<int, 2> wakeup_pipe_;
-		std::atomic_bool dispatching_;
-
+		// std::map<int, EventHandler*> handlers_;
 		std::unique_ptr<ConfigurationFactory> config_;
-		std::map<int, EventHandler*> read_event_handlers_;
-		std::map<int, EventHandler*> write_event_handlers_;
-		std::map<int, EventHandler*> exception_event_handlers_;
 
-		void register_event_handler(int, EventHandler*, unsigned int);
-		void unregister_event_handler(int, unsigned int);
-		void handle_events(const struct timeval*);
-  	void dispatch_event_handlers();
-		void unblock();
-		void send_wakeup();
-		void handle_wakeup();
-		int setup_fd_sets();
+		// int setup_fd_sets();
+		// void handle_events(const struct timeval*);
+  	// void dispatch_event_handlers();
 
 	public:
 		~Application();

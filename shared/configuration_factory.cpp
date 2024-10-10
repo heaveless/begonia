@@ -1,12 +1,14 @@
 #include "configuration_factory.hpp"
 
-int ConfigurationFactory::init() {
-    int sock_instance = socket(AF_INET, SOCK_STREAM, 0);
-    // if (sock_instance == -1)
-    // std::cout << "Initt";
-
-		return sock_instance;
+void ConfigurationFactory::init() {
+	sockfd_ = socket(AF_INET, SOCK_STREAM, 0);
+  if (sockfd_ == -1) {
+    std::runtime_error("Init sock");
+    exit(EXIT_FAILURE);
+  }
 }
 
-void ConfigurationFactory::close() { }
+void ConfigurationFactory::close() { 
+	::close(sockfd_);
+}
 

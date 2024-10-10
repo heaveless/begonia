@@ -9,14 +9,14 @@ sockaddr_in Configuration::setup() {
   return address;
 }
 
-void Configuration::handle_read(int handle) {
+void Configuration::handle_read(int sockfd) {
 
 }
 
-void Configuration::handle_write(int handle) {
+void Configuration::handle_write(int sockfd) {
 
 }
 
-void Configuration::handle_exception(int handle) {
+void Configuration::handle_exception(int sockfd) {
 
 }

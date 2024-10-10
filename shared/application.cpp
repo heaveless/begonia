@@ -1,187 +1,119 @@
 #include "application.hpp"
-#include "client_configuration.hpp"
-#include "server_configuration.hpp"
+
 #include <iostream>
-Application::Application(std::unique_ptr<ConfigurationFactory> config): dispatching_(false) {
+Application::Application(std::unique_ptr<ConfigurationFactory> config) {
+	// sockfd_ = sockfd;
 	config_ = std::move(config);
-
-	int ret = pipe(wakeup_pipe_.data());
-	if (ret != 0) {
-		std::runtime_error("pipe");
-	}
 }
 
-Application::~Application() {
-	unblock();
-	close(wakeup_pipe_[0]);
-	close(wakeup_pipe_[1]);
-}
+Application::~Application() { }
 
 Application& Application::create(std::unique_ptr<ConfigurationFactory> config) {
-	handle_ = config->init();
-	config->setup();
-
-	if (auto* client = dynamic_cast<ClientConfiguration*>(config.get())) {
-		client->connect();
-	} else if (auto* server = dynamic_cast<ServerConfiguration*>(config.get())) {
-		server->bind();
-		server->listen();
-	}
-
   static Application instance(std::move(config));
   return instance;
 }
 
-void Application::register_event_handler(int handle, EventHandler* event_handler, unsigned int event_type) {
-	if (event_type & EventType::kReadEvent) {
-		read_event_handlers_.insert(std::make_pair(handle, event_handler));
-	}
-	if (event_type & EventType::kWriteEvent) {
-		write_event_handlers_.insert(std::make_pair(handle, event_handler));
-	}
-	if (event_type & EventType::kExceptionEvent) {
-		exception_event_handlers_.insert(std::make_pair(handle, event_handler));
-	}
+// void Application::dispatch_event_handlers() {
+	// int sockfd = context_->getSockfd();
+	// auto config = context_->getConfig();
+	// auto handlers = config_->getHandlers();
 
-	if (!dispatching_) {
-    send_wakeup();
-  }
-}
+	// if (auto* client = dynamic_cast<ClientConfiguration*>(config.get())) {
 
-void Application::unregister_event_handler(int handle, unsigned int event_type) {
-	size_t count = 0;
-	if (event_type & EventType::kReadEvent) {
-		count += read_event_handlers_.erase(handle);
-	}
-	if (event_type & EventType::kWriteEvent) {
-		count += write_event_handlers_.erase(handle);
-	}
-	if (event_type & EventType::kExceptionEvent) {
-		count += exception_event_handlers_.erase(handle);
-	}
+	// } else if (auto* server = dynamic_cast<ServerConfiguration*>(config.get())) {
+	// 	if (FD_ISSET(sockfd, &rfds)) {
+	// 		int clientfd = config->accept(sockfd);
+	// 		if (clientfd >= 0) {
+	// 			handlers->insert(std::make_pair(clientfd, config));
+	// 		}
+	// 	}
 
-  if (count > 0 && !dispatching_) {
-    send_wakeup();
-  }
-}
+	// 	for (auto it = handlers.begin(); it != handlers.end();) {
+  //   	if (FD_ISSET(it->first, &rfds)) {
+  //     	it->second->handle_read(it->first);
+  //   	}
+  //   	if (FD_ISSET(it->first, &wfds)) {
+  //     	it->second->handle_write(it->first);
+  //   	}
+  //   	if (FD_ISSET(it->first, &efds)) {
+  //     	it->second->handle_exception(it->first);
+  //   	}
+	// 	}
+	// }
+// }
 
-void Application::dispatch_event_handlers() {
-	dispatching_ = true;
+// int Application::setup_fd_sets() {
+// 	FD_ZERO(&rfds);
+// 	FD_ZERO(&wfds);
+// 	FD_ZERO(&efds);
 
-	if (FD_ISSET(wakeup_pipe_[0], &rfds)) {
-    handle_wakeup();
-  }
+// 	if (/*server*/) {
+// 		for (const auto &h : handlers_) {
+//     	FD_SET(h.first, &rfds);
+//     	FD_SET(h.first, &wfds);
+//     	FD_SET(h.first, &efds);
 
-	for (auto it = read_event_handlers_.begin(); it != read_event_handlers_.end();) {
-		int handle = it->first;
-		auto entry = it->second;
+//     	if (h.first > maxfd) {
+// 	      maxfd = h.first;
+//     	}
+//   	}
+// 	} else {
 
-		if (FD_ISSET(handle, &rfds)) {
-			entry->handle_read(handle);
-		}
+// 	}
 
-		++it;
-	}
+	// FD_SET(sockfd, &rfds);
+	// int maxfd = sockfd;
 
-	for (auto it = write_event_handlers_.begin(); it != write_event_handlers_.end();) {
-		int handle = it->first;
-		auto entry = it->second;
+	// auto handlers = context_->getHandlers();
 
-		if (FD_ISSET(handle, &wfds)) {
-			entry->handle_write(handle);
-		}
-		
-		++it;
-	}
+	// for (const auto &h : handlers) {
+  //   FD_SET(h.first, &rfds);
+  //   FD_SET(h.first, &wfds);
+  //   FD_SET(h.first, &efds);
 
-	for (auto it = exception_event_handlers_.begin(); it != exception_event_handlers_.end();) {
-		int handle = it->first;
-		auto entry = it->second;
+  //   if (h.first > maxfd) {
+  //     maxfd = h.first;
+  //   }
+  // }
 
-		if (FD_ISSET(handle, &efds)) {
-			entry->handle_exception(handle);
-		}
-		
-		++it;
-	}
+	// return maxfd;
+// 	return 0;
+// }
 
-	dispatching_ = false;
-}
+// void Application::handle_events(const struct timeval* timeout) {
+// 	struct timeval tv;
+// 	struct timeval* tv_ptr = nullptr;
+// 	if (timeout != nullptr) {
+// 		tv = *timeout;
+// 		tv_ptr = &tv;
+// 	}
 
-int Application::setup_fd_sets() {
-	FD_ZERO(&rfds);
-	FD_ZERO(&wfds);
-	FD_ZERO(&efds);
+	// int maxfd = setup_fd_sets();
 
-	FD_SET(wakeup_pipe_[0], &rfds);
-	int maxfd = wakeup_pipe_[0];
-
-	for (const auto& p : read_event_handlers_) {
-		FD_SET(p.first, &rfds);
-		maxfd = std::max(maxfd, p.first);
-	}
-
-	for(const auto& p : write_event_handlers_) {
-		FD_SET(p.first, &wfds);
-		maxfd = std::max(maxfd, p.first);
-	}
-
-	for(const auto& p : exception_event_handlers_) {
-		FD_SET(p.first, &efds);
-		maxfd = std::max(maxfd, p.first);
-	}
-
-	return maxfd;
-}
-
-void Application::handle_events(const struct timeval* timeout) {
-	struct timeval tv;
-	struct timeval* tv_ptr = nullptr;
-	if (timeout != nullptr) {
-		tv = *timeout;
-		tv_ptr = &tv;
-	}
-
-	int maxfd = setup_fd_sets();
-
-	int count = select(maxfd + 1, &rfds, &wfds, &efds, tv_ptr);
-	if (count > 0) {
-		dispatch_event_handlers();
-	}
-}
-
-void Application::unblock() {
-	send_wakeup();
-}
-
-void Application::send_wakeup() {
-	int ret;
-	char dummy;
-
-	ret = write(wakeup_pipe_[1], &dummy, sizeof(dummy));
-	if (ret != sizeof(dummy)) {
-		std::runtime_error("write");
-	}
-}
-
-void Application::handle_wakeup() {
-	int ret;
-	char dummy;
-
-	ret = read(wakeup_pipe_[0], &dummy, sizeof(dummy));
-	if (ret != sizeof(dummy)) {
-		std::runtime_error("read");
-	}
-}
+	// int count = select(maxfd + 1, &rfds, &wfds, &efds, tv_ptr);
+	// if (count > 0) {
+	// 	dispatch_event_handlers();
+	// }
+// }
 
 void Application::running() {
+	config_->init();
+	config_->setup();
+
+	if (auto* client = dynamic_cast<ClientConfiguration*>(config_.get())) {
+		client->connect();
+	} else if (auto* server = dynamic_cast<ServerConfiguration*>(config_.get())) {
+		server->bind();
+		server->listen();
+	}
+
 	struct timeval timeout;
 	timeout.tv_sec = 1;
 	timeout.tv_usec = 0;
+	while(1) {
+		config_->handle_events(&timeout);
+	}
 
-	// while(1) {
-
-		handle_events(&timeout);
-	// }
+	config_->close();
 }
 
