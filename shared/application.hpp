@@ -22,12 +22,7 @@ class Application {
 		Application(const Application&) = delete;
 		Application& operator=(const Application&) = delete;
 
-		// std::map<int, EventHandler*> handlers_;
 		std::unique_ptr<ConfigurationFactory> config_;
-
-		// int setup_fd_sets();
-		// void handle_events(const struct timeval*);
-  	// void dispatch_event_handlers();
 
 	public:
 		~Application();

@@ -9,7 +9,6 @@ void ServerConfiguration::handle_events(const struct timeval* timeout) {
 	}
 
 	int maxfd = setup_fd_sets();
-
 	int count = select(maxfd + 1, &rfds, &wfds, &efds, tv_ptr);
 	if (count > 0) {
 		dispatch_event_handlers();
